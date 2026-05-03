@@ -41,20 +41,20 @@ from reward_function import (
 @dataclass
 class GRPOConfig:
     # ── Model ─────────────────────────────────────────────────────────────────
-    model_name: str         = "EleutherAI/gpt-neo-125m"
+    model_name: str         = "HuggingFaceTB/SmolLM2-135M-Instruct"
     dataset_train_path: str = "/mnt/user-data/outputs/grpo_dataset/train"
     dataset_val_path: str   = "/mnt/user-data/outputs/grpo_dataset/val"
     output_dir: str         = "grpo_checkpoints"
 
     # ── GRPO core (maps directly to paper notation) ───────────────────────────
-    group_size: int         = 4      # G  — completions sampled per prompt
+    group_size: int         = 16      # G  — completions sampled per prompt
     beta: float             = 0.04   # β  — KL penalty coefficient
     clip_eps: float         = 0.2    # ε  — PPO-style ratio clip
 
     # ── Generation ────────────────────────────────────────────────────────────
     max_prompt_len: int     = 96     # truncate prompts longer than this
     max_new_tokens: int     = 64     # max tokens the model may generate
-    temperature: float      = 0.9   # sampling temperature during rollout
+    temperature: float      = 0.7   # sampling temperature during rollout
     top_p: float            = 0.95  # nucleus sampling cutoff
 
     # ── Training ──────────────────────────────────────────────────────────────
