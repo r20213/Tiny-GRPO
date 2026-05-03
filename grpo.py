@@ -260,83 +260,94 @@ def get_log_probs(
     """
     Run a forward pass to get per-token log-probs for the completion tokens.
 
-    Right-padding is required here: we need real tokens at consistent position
-    indices for positional embeddings to be meaningful. Padding goes on the
-    right where the loss mask will zero it out anyway.
+    Masking strategy
+    ────────────────
+    The fragile approach — tokenizing prompt+completion jointly and inferring
+    the boundary via length arithmetic — breaks when the tokenizer inserts BOS
+    tokens, or when BPE merges differ across the concatenation boundary vs the
+    parts tokenized separately. Instead we:
+
+      1. Tokenize prompts and completions separately to get exact token counts.
+      2. Pad completions to a fixed width (max_new_tokens) with the pad token.
+      3. Concatenate the padded sequences: [prompt tokens | completion tokens].
+      4. Build the mask directly from the completion attention mask — no
+         arithmetic, no boundary inference.
+
+    Right-padding is used throughout: real tokens sit at consistent low
+    position indices, which is what the model saw during pretraining.
 
     Returns
     ───────
-    log_probs : Tensor  [batch*G, completion_len]  — log π(token | context)
-    mask      : Tensor  [batch*G, completion_len]  — 1 for real, 0 for pad
+    log_probs : Tensor  [batch*G, max_new_tokens]  — log π(token | context)
+    mask      : Tensor  [batch*G, max_new_tokens]  — 1 for real, 0 for pad
     """
-    # Concatenate prompt + completion so the model sees full context
-    full_texts = [p + c for p, c in zip(prompts, completions)]
-
-    # ── Right-pad for forward pass ────────────────────────────────────────────
     tokenizer.padding_side = "right"
-    encoded = tokenizer(
-        full_texts,
-        return_tensors="pt",
-        padding=True,
-        truncation=True,
-        max_length=cfg.max_prompt_len + cfg.max_new_tokens,
-    ).to(cfg.device)
-    # encoded.input_ids : [batch*G, total_len]
 
-    # We need prompt lengths to know where completions start
-    tokenizer.padding_side = "right"
-    prompt_encoded = tokenizer(
+    # ── Tokenize prompts (right-padded to max_prompt_len) ─────────────────────
+    prompt_enc = tokenizer(
         prompts,
         return_tensors="pt",
-        padding=True,
+        padding="max_length",
         truncation=True,
         max_length=cfg.max_prompt_len,
     ).to(cfg.device)
-    # prompt lengths vary; we take the non-padded length per row
-    prompt_lens = encoded.attention_mask.sum(dim=1) - (
-        tokenizer(completions, return_tensors="pt", padding=True,
-                  truncation=True, max_length=cfg.max_new_tokens)
-        .attention_mask.to(cfg.device).sum(dim=1)
-    )
-    # prompt_lens : [batch*G]  — number of real prompt tokens per row
+    # prompt_enc.input_ids      : [batch*G, max_prompt_len]
+    # prompt_enc.attention_mask : [batch*G, max_prompt_len]
 
+    # ── Tokenize completions (right-padded to max_new_tokens) ─────────────────
+    completion_enc = tokenizer(
+        completions,
+        return_tensors="pt",
+        padding="max_length",
+        truncation=True,
+        max_length=cfg.max_new_tokens,
+    ).to(cfg.device)
+    # completion_enc.input_ids      : [batch*G, max_new_tokens]
+    # completion_enc.attention_mask : [batch*G, max_new_tokens]  ← our mask
+
+    # ── Concatenate into full sequences ───────────────────────────────────────
+    input_ids = torch.cat(
+        [prompt_enc.input_ids, completion_enc.input_ids], dim=1,
+    )
+    attention_mask = torch.cat(
+        [prompt_enc.attention_mask, completion_enc.attention_mask], dim=1,
+    )
+    # input_ids      : [batch*G, max_prompt_len + max_new_tokens]
+    # attention_mask : [batch*G, max_prompt_len + max_new_tokens]
+
+    # ── Forward pass ──────────────────────────────────────────────────────────
     logits = model(
-        input_ids=encoded.input_ids,
-        attention_mask=encoded.attention_mask,
+        input_ids=input_ids,
+        attention_mask=attention_mask,
     ).logits
     # logits : [batch*G, total_len, vocab_size]
 
     # Shift: logits[t] predicts token[t+1]
-    shift_logits = logits[:, :-1, :]          # [batch*G, total_len-1, vocab]
-    shift_labels = encoded.input_ids[:, 1:]   # [batch*G, total_len-1]
+    shift_logits = logits[:, :-1, :]     # [batch*G, total_len-1, vocab]
+    shift_labels = input_ids[:, 1:]      # [batch*G, total_len-1]
 
     log_probs_all = F.log_softmax(shift_logits, dim=-1)
     # log_probs_all : [batch*G, total_len-1, vocab]
 
-    # Gather the log-prob of the actual token at each position
+    # Gather the log-prob of the actual next token at each position
     token_log_probs = log_probs_all.gather(
         dim=2,
         index=shift_labels.unsqueeze(-1),
     ).squeeze(-1)
     # token_log_probs : [batch*G, total_len-1]
 
-    # Build completion mask: 1 only for completion tokens (not prompt, not pad)
-    total_len = encoded.input_ids.shape[1]
-    position_ids = torch.arange(total_len - 1, device=cfg.device).unsqueeze(0)
-    # position_ids : [1, total_len-1]
+    # ── Slice out the completion portion ──────────────────────────────────────
+    # The completion tokens start at position max_prompt_len.
+    # After the shift, completion logits start at max_prompt_len - 1
+    # (logit at position t predicts token at t+1, so the logit that predicts
+    # the first completion token is at position max_prompt_len - 1).
+    comp_start = cfg.max_prompt_len - 1
 
-    completion_mask = (
-        (position_ids >= prompt_lens.unsqueeze(1) - 1) &
-        (encoded.attention_mask[:, 1:].bool())
-    ).float()
-    # completion_mask : [batch*G, total_len-1]
-    # 1.0 for positions that are (a) past the prompt and (b) not padding
-
-    # Trim both to max_new_tokens for consistent downstream shapes
-    log_probs = token_log_probs[:, -cfg.max_new_tokens:]
-    mask      = completion_mask[:, -cfg.max_new_tokens:]
-    # log_probs : [batch*G, completion_len]
-    # mask      : [batch*G, completion_len]
+    log_probs = token_log_probs[:, comp_start : comp_start + cfg.max_new_tokens]
+    mask      = completion_enc.attention_mask.float()
+    # log_probs : [batch*G, max_new_tokens]
+    # mask      : [batch*G, max_new_tokens]  — directly from completion tokenizer,
+    #             no arithmetic across tokenization boundaries
 
     return log_probs, mask
 
