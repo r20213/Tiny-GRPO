@@ -41,9 +41,9 @@ from reward_function import (
 @dataclass
 class GRPOConfig:
     # ── Model ─────────────────────────────────────────────────────────────────
-    model_name: str         = "facebook/opt-125m"
-    dataset_train_path: str = "grpo_dataset/train"
-    dataset_val_path: str   = "grpo_dataset/val"
+    model_name: str         = "EleutherAI/gpt-neo-125m"
+    dataset_train_path: str = "/mnt/user-data/outputs/grpo_dataset/train"
+    dataset_val_path: str   = "/mnt/user-data/outputs/grpo_dataset/val"
     output_dir: str         = "grpo_checkpoints"
 
     # ── GRPO core (maps directly to paper notation) ───────────────────────────
