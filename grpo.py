@@ -27,7 +27,7 @@ from torch.utils.data import DataLoader, Dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from datasets import load_from_disk
 
-from reward_function import (
+from reward_functions import (
     reward_think_tags,
     reward_think_content,
     reward_answer,
@@ -41,9 +41,9 @@ from reward_function import (
 @dataclass
 class GRPOConfig:
     # ── Model ─────────────────────────────────────────────────────────────────
-    model_name: str         = "EleutherAI/gpt-neo-125m"
-    dataset_train_path: str = "/mnt/user-data/outputs/grpo_dataset/train"
-    dataset_val_path: str   = "/mnt/user-data/outputs/grpo_dataset/val"
+    model_name: str         = "facebook/opt-125m"
+    dataset_train_path: str = "grpo_dataset/train"
+    dataset_val_path: str   = "grpo_dataset/val"
     output_dir: str         = "grpo_checkpoints"
 
     # ── GRPO core (maps directly to paper notation) ───────────────────────────
@@ -622,14 +622,14 @@ def train(cfg: GRPOConfig):
     # ── Load policy model ─────────────────────────────────────────────────────
     policy_model = AutoModelForCausalLM.from_pretrained(
         cfg.model_name,
-        torch_dtype=torch.float32,
+        dtype=torch.float32,
     ).to(cfg.device)
 
     # ── Load frozen reference model ───────────────────────────────────────────
     # The reference stays at the initial weights throughout training.
     ref_model = AutoModelForCausalLM.from_pretrained(
         cfg.model_name,
-        torch_dtype=torch.float32,
+        dtype=torch.float32,
     ).to(cfg.device)
     ref_model.eval()
     for param in ref_model.parameters():
