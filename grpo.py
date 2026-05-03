@@ -27,7 +27,7 @@ from torch.utils.data import DataLoader, Dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from datasets import load_from_disk
 
-from reward_function import (
+from reward_functions import (
     reward_think_tags,
     reward_think_content,
     reward_answer,
@@ -47,20 +47,20 @@ class GRPOConfig:
     output_dir: str         = "grpo_checkpoints"
 
     # ── GRPO core (maps directly to paper notation) ───────────────────────────
-    group_size: int         = 8      # G  — completions sampled per prompt
+    group_size: int         = 4      # G  — completions sampled per prompt
     beta: float             = 0.04   # β  — KL penalty coefficient
     clip_eps: float         = 0.2    # ε  — PPO-style ratio clip
 
     # ── Generation ────────────────────────────────────────────────────────────
-    max_prompt_len: int     = 128    # truncate prompts longer than this
-    max_new_tokens: int     = 128    # max tokens the model may generate
+    max_prompt_len: int     = 96     # truncate prompts longer than this
+    max_new_tokens: int     = 64     # max tokens the model may generate
     temperature: float      = 0.9   # sampling temperature during rollout
     top_p: float            = 0.95  # nucleus sampling cutoff
 
     # ── Training ──────────────────────────────────────────────────────────────
     lr: float               = 1e-5
     num_epochs: int         = 3
-    batch_size: int         = 4      # prompts per step (completions = batch * G)
+    batch_size: int         = 2      # prompts per step (completions = batch * G)
     grad_clip: float        = 1.0
     warmup_steps: int       = 50
 
@@ -492,6 +492,10 @@ def train_step(
     # log_probs_policy : [batch*G, completion_len]
     # mask             : [batch*G, completion_len]
 
+    # Free policy activations before the ref forward pass — both would
+    # otherwise sit in VRAM simultaneously, doubling activation memory.
+    torch.cuda.empty_cache()
+
     with torch.no_grad():
         log_probs_ref, _ = get_log_probs(
             ref_model, tokenizer, repeated_prompts, completion_texts, cfg,
@@ -641,6 +645,10 @@ def train(cfg: GRPOConfig):
     # row for the new <pad> token. Both models must be resized to stay in sync.
     policy_model.resize_token_embeddings(len(tokenizer))
     ref_model.resize_token_embeddings(len(tokenizer))
+
+    # Gradient checkpointing trades ~20% speed for ~50% activation memory.
+    # Activations are recomputed on the backward pass instead of stored.
+    policy_model.gradient_checkpointing_enable()
 
     # ── Datasets & loaders ───────────────────────────────────────────────────
     train_hf = load_from_disk(cfg.dataset_train_path)
