@@ -50,8 +50,8 @@ TEMPLATES = [
     "The bag has {a} marbles and {b} coins.",
 
     # Four-number templates
-    "The warehouse stores {a} boxes on floor 1, {b} on floor 2, {c} on floor 3, and {d} on floor 4.",
-    "The school has {a} students in grade 1, {b} in grade 2, {c} in grade 3, and {d} in grade 4.",
+    "The warehouse stores {a} boxes on floor one, {b} on floor two, {c} on floor three, and {d} on floor four.",
+    "The school has {a} students in grade one, {b} in grade two, {c} in grade three, and {d} in grade four.",
     "She picked {a} strawberries, {b} blueberries, {c} raspberries, and {d} blackberries.",
     "The survey got {a} responses on Monday, {b} on Tuesday, {c} on Wednesday, and {d} on Thursday.",
 ]
