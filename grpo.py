@@ -635,17 +635,12 @@ def train(cfg: GRPOConfig):
     for param in ref_model.parameters():
         param.requires_grad_(False)
 
-    # ── Resize embedding tables + restore weight tying ────────────────────────
-    # resize_token_embeddings() allocates a new embed_tokens matrix and copies
-    # old weights in — but this severs the tie between embed_tokens.weight and
-    # lm_head.weight (they shared the same tensor object before the resize).
-    # tie_weights() re-points lm_head.weight to the new embed_tokens.weight.
-    # Both models must be resized independently to keep them in sync.
+    # ── Resize embedding tables ──────────────────────────────────────────────
+    # OPT's checkpoint already stores embed_tokens and lm_head as independent
+    # tensors — no tying is in effect. We only need to grow both tables by one
+    # row for the new <pad> token. Both models must be resized to stay in sync.
     policy_model.resize_token_embeddings(len(tokenizer))
-    policy_model.tie_weights()
-
     ref_model.resize_token_embeddings(len(tokenizer))
-    ref_model.tie_weights()
 
     # ── Datasets & loaders ───────────────────────────────────────────────────
     train_hf = load_from_disk(cfg.dataset_train_path)
