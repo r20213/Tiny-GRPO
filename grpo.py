@@ -27,7 +27,7 @@ from torch.utils.data import DataLoader, Dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from datasets import load_from_disk
 
-from reward_functions import (
+from reward_function import (
     reward_think_tags,
     reward_think_content,
     reward_answer,
