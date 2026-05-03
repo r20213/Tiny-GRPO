@@ -151,7 +151,7 @@ def reward_answer(completions: list[str], **kwargs: Any) -> list[float]:
         inner = _extract_tag(completion, "answer")
         try:
             predicted = int(inner.strip())
-            correctness_score = 1.0 if predicted == ground_truth else -1.0
+            correctness_score = 1.0 if predicted == ground_truth else 0.01
         except (ValueError, AttributeError):
             correctness_score = -1.0
 
