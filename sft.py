@@ -24,7 +24,7 @@ def format_instruction(sample):
         {"role": "assistant", "content": sample["completion"]},
     ]
     # This applies the model's specific chat template (e.g., <|im_start|>user...)
-    return tokenizer.apply_chat_template(messages, tokenize=False)
+    return messages
 
 # 4. Configure Training
 sft_config = SFTConfig(
@@ -40,12 +40,11 @@ sft_config = SFTConfig(
     logging_steps=10,
     push_to_hub=True,          # This enables automatic upload
     hub_model_id="LastTransformer/SmolLM2-135M-Custom-SFT", # Change this!
-    report_to="none",
-    train_on_completions=True,
+    report_to="none"
 )
 
 # Apply formatting to create a 'text' column
-dataset = dataset.map(lambda x: {"text": format_instruction(x)})
+dataset = dataset.map(lambda x: {"messages": format_instruction(x)})
 
 # 5. Initialize Trainer
 trainer = SFTTrainer(
