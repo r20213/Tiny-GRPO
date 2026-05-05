@@ -41,6 +41,7 @@ sft_config = SFTConfig(
     push_to_hub=True,          # This enables automatic upload
     hub_model_id="LastTransformer/SmolLM2-135M-Custom-SFT", # Change this!
     report_to="none",
+    train_on_completions=True,
 )
 
 # Apply formatting to create a 'text' column
