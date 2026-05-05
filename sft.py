@@ -30,7 +30,7 @@ def format_instruction(sample):
 sft_config = SFTConfig(
     output_dir=output_dir,
     max_length=512,
-    dataset_text_field="text", # We will create this via a mapping
+    dataset_text_field="messages", # We will create this via a mapping
     packing=False,
     per_device_train_batch_size=4,
     gradient_accumulation_steps=4,
