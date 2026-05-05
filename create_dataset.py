@@ -91,7 +91,7 @@ def fill_template(template: str) -> tuple[str, list[int]]:
     unique_slots = sorted(set(placeholders), key=lambda x: placeholders.index(x))
     values = {}
     for slot in unique_slots:
-        values[slot] = random.randint(1, 20)
+        values[slot] = random.randint(1, 30)
     paragraph = template.format(**values)
     numbers = [values[p] for p in placeholders]  # preserve order of appearance
     return paragraph, numbers
@@ -132,7 +132,7 @@ def generate_dataset(n: int = 3000) -> list[dict]:
 
 
 if __name__ == "__main__":
-    data = generate_dataset(3000)
+    data = generate_dataset(10000)
 
     # ── Sanity check ──────────────────────────────────────────────────────────
     print("\n--- 3 random samples ---")
