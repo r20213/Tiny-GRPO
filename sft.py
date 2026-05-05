@@ -51,7 +51,7 @@ trainer = SFTTrainer(
     model=model_id,
     train_dataset=dataset,
     args=sft_config,
-    tokenizer=tokenizer,
+    processing_class=tokenizer,
 )
 
 # 6. Train and Upload
