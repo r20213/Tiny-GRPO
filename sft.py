@@ -20,7 +20,7 @@ for ex in raw_data:
         errors.append(("think mismatch", ex))
     elif int(answer_match.group(1)) != ex["answer"]:
         errors.append(("answer mismatch", ex))
-print(f"Validation errors: {len(errors)} / {len(data)}")
+print(f"Validation errors: {len(errors)} / {len(raw_data)}")
 
 # ── Split & save ──────────────────────────────────────────────────────────
 random.shuffle(raw_data)
