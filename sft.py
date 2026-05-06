@@ -19,12 +19,12 @@ tokenizer.pad_token = tokenizer.eos_token  # SmolLM2 needs a pad token defined
 # 3. Define Formatting Function
 # This wraps your prompt/completion into the ChatML format SmolLM2 expects
 def format_instruction(sample):
-    messages = [
-        {"role": "user", "content": sample["prompt"]},
-        {"role": "assistant", "content": sample["completion"]},
-    ]
-    # This applies the model's specific chat template (e.g., <|im_start|>user...)
-    return messages
+    return {
+        "prompt": [{"role": "user", "content": sample["prompt"]}],
+        "completion": [
+            {"role": "assistant", "content": sample["completion"]}
+        ],
+    }
 
 # 4. Configure Training
 sft_config = SFTConfig(
@@ -44,7 +44,7 @@ sft_config = SFTConfig(
 )
 
 # Apply formatting to create a 'text' column
-dataset = dataset.map(lambda x: {"messages": format_instruction(x)})
+dataset = dataset.map(format_instruction)
 
 # 5. Initialize Trainer
 trainer = SFTTrainer(
