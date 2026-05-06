@@ -1,4 +1,4 @@
-import torch, random
+import torch, random, re
 from datasets import Dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments
 from trl import SFTTrainer, SFTConfig
