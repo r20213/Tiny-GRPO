@@ -2,7 +2,7 @@ import torch, random
 from datasets import Dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments
 from trl import SFTTrainer, SFTConfig
-from create_dataset import generate_dataset
+from create_dataset import generate_dataset,build_think
 
 # 1. Prepare your data
 # If your data is a list of dicts, convert it to a Hugging Face Dataset
