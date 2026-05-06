@@ -1,5 +1,5 @@
 import torch, random, re
-from datasets import Dataset
+from datasets import Dataset, DatasetDict
 from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments
 from trl import SFTTrainer, SFTConfig
 from create_dataset import generate_dataset,build_think
