@@ -72,7 +72,8 @@ sft_config = SFTConfig(
 )
 
 # Apply formatting to create a 'text' column
-dataset = dataset.map(format_instruction)
+train_ds = train_ds.map(format_instruction)
+val_ds = val_ds.map(format_instruction)
 
 # 5. Initialize Trainer
 trainer = SFTTrainer(
