@@ -78,7 +78,7 @@ val_ds = val_ds.map(format_instruction)
 # 5. Initialize Trainer
 trainer = SFTTrainer(
     model=model_id,
-    train_dataset=train_ds.select(range(300)),
+    train_dataset=train_ds.select(range(600)),
     eval_dataset=val_ds,
     args=sft_config,
     processing_class=tokenizer,
