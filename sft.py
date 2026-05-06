@@ -6,7 +6,7 @@ from create_dataset import generate_dataset
 
 # 1. Prepare your data
 # If your data is a list of dicts, convert it to a Hugging Face Dataset
-raw_data = generate_dataset(10000)[:10]
+raw_data = generate_dataset(10000)
 dataset = Dataset.from_list(raw_data)
 
 model_id = "HuggingFaceTB/SmolLM2-135M-Instruct"
