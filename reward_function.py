@@ -61,7 +61,7 @@ def reward_think_tags(completions: list[str], **kwargs: Any) -> list[float]:
     for completion in completions:
         has_open  = "<think>"  in completion
         has_close = "</think>" in completion
-        rewards.append(0.1 if (has_open and has_close) else -0.1)
+        rewards.append(0.2 if (has_open and has_close) else -0.2)
     return rewards
 
 
